@@ -23,16 +23,17 @@ const inputText = ref('');
 const showStickers = ref(false);
 const chatEndRef = ref(null);
 const stickerMenuRef = ref(null);
+const resolveAssetUrl = (path) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
 
 const stickers = [
-  { id: 'pika-front', name: '皮卡正面', url: '/stickers/皮卡正面.png' },
-  { id: 'pika-back', name: '皮卡背面', url: '/stickers/皮卡背面.png' },
-  { id: 'pika-side', name: '皮卡側面', url: '/stickers/皮卡側面.png' },
-  { id: 'pika-happy', name: '皮卡開心', url: '/stickers/皮卡開心.png' },
-  { id: 'pika-salute', name: '皮卡敬禮', url: '/stickers/皮卡敬禮.png' },
-  { id: 'pika-question', name: '皮卡疑問', url: '/stickers/皮卡疑問.png' },
-  { id: 'pika-explain', name: '皮卡說明', url: '/stickers/皮卡說明.png' },
-  { id: 'pika-board', name: '皮卡舉牌', url: '/stickers/皮卡舉牌.png' },
+  { id: 'pika-front', name: '皮卡正面', url: resolveAssetUrl('/stickers/皮卡正面.png') },
+  { id: 'pika-back', name: '皮卡背面', url: resolveAssetUrl('/stickers/皮卡背面.png') },
+  { id: 'pika-side', name: '皮卡側面', url: resolveAssetUrl('/stickers/皮卡側面.png') },
+  { id: 'pika-happy', name: '皮卡開心', url: resolveAssetUrl('/stickers/皮卡開心.png') },
+  { id: 'pika-salute', name: '皮卡敬禮', url: resolveAssetUrl('/stickers/皮卡敬禮.png') },
+  { id: 'pika-question', name: '皮卡疑問', url: resolveAssetUrl('/stickers/皮卡疑問.png') },
+  { id: 'pika-explain', name: '皮卡說明', url: resolveAssetUrl('/stickers/皮卡說明.png') },
+  { id: 'pika-board', name: '皮卡舉牌', url: resolveAssetUrl('/stickers/皮卡舉牌.png') },
 ];
 
 const chatData = reactive({
@@ -184,7 +185,7 @@ onBeforeUnmount(() => {
           class="pointer-events-none absolute inset-0 z-0 flex select-none items-center justify-center opacity-[0.07]"
         >
           <img
-            src="/assets/hsinchu-logo.svg"
+            :src="resolveAssetUrl('/assets/hsinchu-logo.svg')"
             alt="新竹市市徽"
             class="h-64 w-64 object-contain md:h-[420px] md:w-[420px]"
           />
@@ -210,7 +211,7 @@ onBeforeUnmount(() => {
                 v-if="msg.sender === 'agent'"
                 class="h-10 w-10 overflow-hidden rounded-full border-2 border-[#549474]/20 bg-white shadow-sm md:h-12 md:w-12"
               >
-                <img src="/stickers/皮卡正面.png" alt="客服頭像" class="h-full w-full object-contain p-1" />
+                <img :src="resolveAssetUrl('/stickers/皮卡正面.png')" alt="客服頭像" class="h-full w-full object-contain p-1" />
               </div>
               <div
                 v-else
@@ -369,7 +370,7 @@ onBeforeUnmount(() => {
             <span>支援 JPG, PNG, PDF, Word (最大 20MB)</span>
           </div>
           <img
-            src="/assets/footer-logo.svg"
+            :src="resolveAssetUrl('/assets/footer-logo.svg')"
             alt="新竹市政府識別"
             class="hidden h-6 w-auto opacity-70 sm:inline-block"
           />

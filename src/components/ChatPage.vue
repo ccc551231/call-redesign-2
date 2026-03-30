@@ -306,7 +306,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div class="relative mx-auto flex max-w-6xl items-end gap-3">
+        <div class="relative flex w-full items-end gap-3">
           <div
             class="flex flex-1 items-end gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-sm transition-all duration-200 focus-within:border-[#549474]/40 focus-within:bg-white"
           >
@@ -363,7 +363,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div
-          class="mx-auto mt-4 flex max-w-6xl items-center justify-between px-2 text-[11px] font-medium text-slate-400"
+          class="mt-4 flex w-full items-center justify-between px-2 text-[11px] font-medium text-slate-400"
         >
           <div class="flex items-center gap-1.5">
             <AlertCircle :size="12" class="text-[#549474]" />

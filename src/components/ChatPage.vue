@@ -1,0 +1,408 @@
+<script setup>
+import { computed, ref, reactive, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
+import {
+  Paperclip,
+  Smile,
+  Send,
+  CheckCheck,
+  X,
+  AlertCircle,
+  PhoneCall,
+  LogOut,
+} from 'lucide-vue-next';
+
+const props = defineProps({
+  mode: {
+    type: String,
+    default: 'agent',
+  },
+});
+
+const isAgentMode = computed(() => props.mode === 'agent');
+const inputText = ref('');
+const showStickers = ref(false);
+const chatEndRef = ref(null);
+const stickerMenuRef = ref(null);
+
+const stickers = [
+  { id: 'pika-front', name: '皮卡正面', url: '/stickers/皮卡正面.png' },
+  { id: 'pika-back', name: '皮卡背面', url: '/stickers/皮卡背面.png' },
+  { id: 'pika-side', name: '皮卡側面', url: '/stickers/皮卡側面.png' },
+  { id: 'pika-happy', name: '皮卡開心', url: '/stickers/皮卡開心.png' },
+  { id: 'pika-salute', name: '皮卡敬禮', url: '/stickers/皮卡敬禮.png' },
+  { id: 'pika-question', name: '皮卡疑問', url: '/stickers/皮卡疑問.png' },
+  { id: 'pika-explain', name: '皮卡說明', url: '/stickers/皮卡說明.png' },
+  { id: 'pika-board', name: '皮卡舉牌', url: '/stickers/皮卡舉牌.png' },
+];
+
+const chatData = reactive({
+  userName: '張曉明',
+  caseId: '#HSC-20240320',
+  source: 'APP',
+  messages: [
+    {
+      id: 1,
+      sender: 'user',
+      type: 'text',
+      text: '你好，我想詢問關於新竹市今年度的青年租屋補貼。',
+      time: '14:15',
+      status: 'read',
+    },
+    {
+      id: 2,
+      sender: 'agent',
+      type: 'text',
+      text: '您好！歡迎諮詢新竹市政府客服。關於青年租屋補貼，本年度已於三月份啟動受理。\n\n請問您是想了解目前的「申請進度」還是「申請資格」呢？',
+      time: '14:16',
+      status: 'read',
+    },
+    {
+      id: 3,
+      sender: 'user',
+      type: 'text',
+      text: '我想先確認申請資格。',
+      time: '14:20',
+      status: 'unread',
+    },
+  ],
+});
+
+const quickReplies = [
+  '了解，謝謝專員',
+  '我要查詢申請資格',
+  '我要查詢辦理進度',
+  '轉接專人服務',
+  '感謝您的諮詢',
+];
+
+const headerClass = computed(() =>
+  isAgentMode.value ? 'justify-between' : 'justify-end'
+);
+
+const scrollToBottom = async () => {
+  await nextTick();
+  chatEndRef.value?.scrollIntoView({ behavior: 'smooth' });
+};
+
+watch(
+  () => chatData.messages.length,
+  () => {
+    scrollToBottom();
+  }
+);
+
+const getCurrentTime = () =>
+  new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+const handleSendMessage = () => {
+  if (!inputText.value.trim()) return;
+
+  chatData.messages.push({
+    id: Date.now(),
+    sender: 'agent',
+    type: 'text',
+    text: inputText.value,
+    time: getCurrentTime(),
+    status: 'sent',
+  });
+
+  inputText.value = '';
+};
+
+const handleSendSticker = (stickerUrl) => {
+  chatData.messages.push({
+    id: Date.now(),
+    sender: 'agent',
+    type: 'sticker',
+    url: stickerUrl,
+    time: getCurrentTime(),
+    status: 'sent',
+  });
+
+  showStickers.value = false;
+};
+
+const handleClickOutside = (event) => {
+  if (stickerMenuRef.value && !stickerMenuRef.value.contains(event.target)) {
+    showStickers.value = false;
+  }
+};
+
+onMounted(() => {
+  scrollToBottom();
+  document.addEventListener('mousedown', handleClickOutside);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', handleClickOutside);
+});
+</script>
+
+<template>
+  <div class="flex h-screen w-full overflow-hidden bg-white font-sans text-slate-800">
+    <main class="relative flex h-full w-full flex-col overflow-hidden bg-white">
+      <header
+        class="z-30 flex h-20 shrink-0 items-center bg-[#549474] px-6 text-white shadow-md md:px-10"
+        :class="headerClass"
+      >
+        <div v-if="isAgentMode" class="flex items-center gap-4 overflow-hidden">
+          <div
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/30 bg-white/20 text-lg font-bold backdrop-blur-md md:h-12 md:w-12"
+          >
+            {{ chatData.userName[0] }}
+          </div>
+          <div class="min-w-0">
+            <h3 class="flex items-center gap-2 text-base font-bold md:text-lg">
+              <span class="truncate">{{ chatData.userName }}</span>
+              <span
+                class="hidden whitespace-nowrap rounded border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] font-normal tracking-tight sm:inline"
+              >
+                案號: {{ chatData.caseId }}
+              </span>
+            </h3>
+            <p class="flex items-center gap-1 whitespace-nowrap text-[10px] font-medium text-white/90 md:text-xs">
+              <span
+                class="h-2 w-2 animate-pulse rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]"
+              />
+              線上對話中
+            </p>
+          </div>
+        </div>
+
+        <div class="flex shrink-0 items-center gap-3 text-right md:gap-4">
+          <h1 class="whitespace-nowrap text-sm font-black tracking-tighter md:text-xl">
+            新竹市政府 1999 文字客服
+          </h1>
+          <div class="hidden rounded-xl bg-white/20 p-2.5 sm:block">
+            <PhoneCall :size="22" class="text-white" />
+          </div>
+        </div>
+      </header>
+
+      <div class="relative flex flex-1 flex-col overflow-hidden bg-white">
+        <div
+          class="pointer-events-none absolute inset-0 z-0 flex select-none items-center justify-center opacity-[0.07]"
+        >
+          <img
+            src="/assets/hsinchu-logo.svg"
+            alt="新竹市市徽"
+            class="h-64 w-64 object-contain md:h-[420px] md:w-[420px]"
+          />
+        </div>
+
+        <div class="relative z-10 flex-1 space-y-10 overflow-y-auto px-6 pt-8 pb-16 scroll-smooth md:px-20">
+          <div class="flex justify-center">
+            <span
+              class="rounded-full border border-slate-100 bg-slate-100 px-5 py-1.5 text-[11px] font-medium uppercase tracking-widest text-slate-400"
+            >
+              今天 14:15
+            </span>
+          </div>
+
+          <div
+            v-for="msg in chatData.messages"
+            :key="msg.id"
+            class="flex items-start gap-3 md:gap-4"
+            :class="msg.sender === 'agent' ? 'flex-row-reverse' : 'flex-row'"
+          >
+            <div class="mt-1 shrink-0">
+              <div
+                v-if="msg.sender === 'agent'"
+                class="h-10 w-10 overflow-hidden rounded-full border-2 border-[#549474]/20 bg-white shadow-sm md:h-12 md:w-12"
+              >
+                <img src="/stickers/皮卡正面.png" alt="客服頭像" class="h-full w-full object-contain p-1" />
+              </div>
+              <div
+                v-else
+                class="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-slate-200 text-base font-bold text-slate-500 shadow-sm md:h-12 md:w-12 md:text-lg"
+              >
+                {{ chatData.userName[0] }}
+              </div>
+            </div>
+
+            <div
+              class="flex max-w-[80%] flex-col md:max-w-[70%]"
+              :class="msg.sender === 'agent' ? 'items-end' : 'items-start'"
+            >
+              <div
+                v-if="msg.type === 'text'"
+                class="rounded-2xl p-4 text-sm leading-relaxed shadow-sm md:p-5 md:text-base"
+                :class="
+                  msg.sender === 'agent'
+                    ? 'rounded-tr-none bg-[#549474] text-white shadow-[#549474]/10'
+                    : 'rounded-tl-none border border-slate-200/50 bg-[#F3F6F4] text-[#757472]'
+                "
+              >
+                <p v-for="(line, index) in msg.text.split('\n')" :key="index" :class="index > 0 ? 'mt-2' : ''">
+                  {{ line }}
+                </p>
+              </div>
+
+              <div v-else class="group relative">
+                <img :src="msg.url" alt="貼圖" class="h-auto w-32 rounded-lg md:w-48" />
+              </div>
+
+              <div
+                class="mt-2 flex items-center gap-1 text-[11px]"
+                :class="msg.sender === 'agent' ? 'flex-row-reverse text-[#549474]' : 'text-slate-400'"
+              >
+                <span class="font-semibold">{{ msg.time }}</span>
+                <CheckCheck v-if="msg.sender === 'agent'" :size="14" />
+                <span v-if="msg.sender === 'user' && msg.status === 'read'" class="mr-1 font-bold">已讀</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="h-8 w-full" />
+          <div ref="chatEndRef" />
+        </div>
+      </div>
+
+      <footer class="relative z-30 shrink-0 border-t border-slate-100 bg-white px-6 py-6 md:px-10">
+        <div v-if="isAgentMode" class="no-scrollbar flex gap-2 overflow-x-auto pb-5">
+          <button
+            v-for="reply in quickReplies"
+            :key="reply"
+            type="button"
+            class="whitespace-nowrap rounded-full border border-[#549474]/20 bg-white px-4 py-2 text-sm font-medium text-[#757472] shadow-sm transition-all hover:bg-[#549474]/10 hover:text-[#549474]"
+            @click="inputText = reply"
+          >
+            {{ reply }}
+          </button>
+        </div>
+
+        <div
+          v-if="showStickers"
+          ref="stickerMenuRef"
+          class="animate-in fade-in slide-in-from-bottom-4 absolute bottom-32 left-6 z-50 w-72 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl duration-200 md:left-10 md:w-96"
+        >
+          <div class="mb-3 flex items-center justify-between border-b border-slate-100 pb-2">
+            <h4 class="flex items-center gap-2 text-sm font-bold text-[#549474]">
+              <Smile :size="16" />
+              皮卡貼圖庫
+            </h4>
+            <button
+              type="button"
+              class="text-slate-400 transition-colors hover:text-red-500"
+              @click="showStickers = false"
+            >
+              <X :size="18" />
+            </button>
+          </div>
+          <div class="custom-scrollbar grid max-h-60 grid-cols-4 gap-3 overflow-y-auto pr-1">
+            <button
+              v-for="sticker in stickers"
+              :key="sticker.id"
+              type="button"
+              class="flex flex-col items-center gap-1 rounded-xl p-1.5 transition-all hover:scale-110 hover:bg-slate-100 active:scale-95"
+              @click="handleSendSticker(sticker.url)"
+            >
+              <img :src="sticker.url" :alt="sticker.name" class="h-auto w-full rounded-md" />
+              <span class="w-full truncate text-center text-[10px] text-slate-400">
+                {{ sticker.name.replace('皮卡', '') }}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div class="relative mx-auto flex max-w-6xl items-end gap-3">
+          <div
+            class="flex flex-1 items-end gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-sm transition-all duration-200 focus-within:border-[#549474]/40 focus-within:bg-white"
+          >
+            <button
+              type="button"
+              class="p-3 transition-colors"
+              :class="showStickers ? 'text-[#549474]' : 'text-slate-400 hover:text-[#549474]'"
+              @click="showStickers = !showStickers"
+            >
+              <Smile :size="22" />
+            </button>
+
+            <label class="cursor-pointer p-3 text-slate-400 transition-colors hover:text-[#549474]">
+              <Paperclip :size="22" />
+              <input type="file" class="hidden" />
+            </label>
+
+            <textarea
+              v-model="inputText"
+              rows="1"
+              placeholder="請輸入訊息內容..."
+              class="max-h-40 flex-1 resize-none border-none bg-transparent py-3 text-base leading-relaxed text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-0"
+              @keydown.enter.exact.prevent="handleSendMessage"
+            />
+
+            <button
+              type="button"
+              class="rounded-xl p-4 transition-all"
+              :class="
+                inputText.trim()
+                  ? 'bg-[#549474] text-white shadow-lg shadow-[#549474]/20 active:scale-95'
+                  : 'pointer-events-none text-slate-300 shadow-none'
+              "
+              :disabled="!inputText.trim()"
+              @click="handleSendMessage"
+            >
+              <Send :size="20" />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            class="hidden h-[64px] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-[#757472] p-4 font-bold text-white shadow-md transition-all active:scale-95 hover:bg-slate-600 sm:flex"
+          >
+            <LogOut :size="20" />
+            結束對話
+          </button>
+          <button
+            type="button"
+            class="h-[64px] rounded-2xl bg-[#757472] p-4 text-white shadow-md sm:hidden"
+          >
+            <LogOut :size="20" />
+          </button>
+        </div>
+
+        <div
+          class="mx-auto mt-4 flex max-w-6xl items-center justify-between px-2 text-[11px] font-medium text-slate-400"
+        >
+          <div class="flex items-center gap-1.5">
+            <AlertCircle :size="12" class="text-[#549474]" />
+            <span>支援 JPG, PNG, PDF, Word (最大 20MB)</span>
+          </div>
+          <img
+            src="/assets/footer-logo.svg"
+            alt="新竹市政府識別"
+            class="hidden h-6 w-auto opacity-70 sm:inline-block"
+          />
+        </div>
+      </footer>
+    </main>
+  </div>
+</template>
+
+<style scoped>
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+</style>

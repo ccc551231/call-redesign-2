@@ -24,6 +24,7 @@ const showStickers = ref(false);
 const chatEndRef = ref(null);
 const stickerMenuRef = ref(null);
 const fileInputRef = ref(null);
+const previewImage = ref(null);
 const resolveAssetUrl = (path) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
 
 const stickers = [
@@ -152,13 +153,32 @@ const handleClickOutside = (event) => {
   }
 };
 
+const openImagePreview = (message) => {
+  previewImage.value = {
+    url: message.url,
+    fileName: message.fileName,
+  };
+};
+
+const closeImagePreview = () => {
+  previewImage.value = null;
+};
+
+const handleKeydown = (event) => {
+  if (event.key === 'Escape') {
+    closeImagePreview();
+  }
+};
+
 onMounted(() => {
   scrollToBottom();
   document.addEventListener('mousedown', handleClickOutside);
+  document.addEventListener('keydown', handleKeydown);
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener('mousedown', handleClickOutside);
+  document.removeEventListener('keydown', handleKeydown);
   chatData.messages.forEach((message) => {
     if ((message.type === 'image' || message.type === 'file') && message.url?.startsWith('blob:')) {
       URL.revokeObjectURL(message.url);
@@ -271,15 +291,17 @@ onBeforeUnmount(() => {
                 <img :src="msg.url" alt="貼圖" class="h-auto w-32 rounded-lg md:w-48" />
               </div>
 
-              <div
+              <button
                 v-else-if="msg.type === 'image'"
-                class="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm"
+                type="button"
+                class="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 text-left shadow-sm transition-transform hover:scale-[1.02]"
+                @click="openImagePreview(msg)"
               >
                 <img :src="msg.url" :alt="msg.fileName" class="h-auto max-w-[220px] rounded-xl md:max-w-[320px]" />
                 <p class="mt-2 truncate text-xs font-medium text-slate-500">
                   {{ msg.fileName }}
                 </p>
-              </div>
+              </button>
 
               <div
                 v-else
@@ -433,6 +455,35 @@ onBeforeUnmount(() => {
           />
         </div>
       </footer>
+
+      <div
+        v-if="previewImage"
+        class="absolute inset-0 z-[70] flex items-center justify-center bg-slate-950/70 p-6 backdrop-blur-sm"
+        @click="closeImagePreview"
+      >
+        <div
+          class="relative max-h-full max-w-5xl overflow-hidden rounded-[28px] bg-white p-4 shadow-2xl"
+          @click.stop
+        >
+          <button
+            type="button"
+            class="absolute top-4 right-4 z-10 rounded-full bg-slate-900/75 p-2 text-white transition-colors hover:bg-slate-900"
+            @click="closeImagePreview"
+          >
+            <X :size="18" />
+          </button>
+
+          <img
+            :src="previewImage.url"
+            :alt="previewImage.fileName"
+            class="max-h-[80vh] w-auto max-w-full rounded-[20px] object-contain"
+          />
+
+          <p class="mt-3 truncate pr-10 text-sm font-semibold text-slate-600">
+            {{ previewImage.fileName }}
+          </p>
+        </div>
+      </div>
     </main>
   </div>
 </template>

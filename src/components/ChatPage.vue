@@ -23,6 +23,7 @@ const inputText = ref('');
 const showStickers = ref(false);
 const chatEndRef = ref(null);
 const stickerMenuRef = ref(null);
+const fileInputRef = ref(null);
 const resolveAssetUrl = (path) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
 
 const stickers = [
@@ -123,6 +124,28 @@ const handleSendSticker = (stickerUrl) => {
   showStickers.value = false;
 };
 
+const handleSendFile = (event) => {
+  const [file] = event.target.files || [];
+
+  if (!file) return;
+
+  const isImage = file.type.startsWith('image/');
+  const fileUrl = URL.createObjectURL(file);
+
+  chatData.messages.push({
+    id: Date.now(),
+    sender: 'agent',
+    type: isImage ? 'image' : 'file',
+    url: fileUrl,
+    fileName: file.name,
+    fileType: file.type,
+    time: getCurrentTime(),
+    status: 'sent',
+  });
+
+  event.target.value = '';
+};
+
 const handleClickOutside = (event) => {
   if (stickerMenuRef.value && !stickerMenuRef.value.contains(event.target)) {
     showStickers.value = false;
@@ -136,6 +159,11 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('mousedown', handleClickOutside);
+  chatData.messages.forEach((message) => {
+    if ((message.type === 'image' || message.type === 'file') && message.url?.startsWith('blob:')) {
+      URL.revokeObjectURL(message.url);
+    }
+  });
 });
 </script>
 
@@ -174,8 +202,8 @@ onBeforeUnmount(() => {
           <h1 class="whitespace-nowrap text-sm font-black tracking-tighter md:text-xl">
             新竹市政府 1999 文字客服
           </h1>
-          <div class="hidden rounded-xl bg-white/20 p-2.5 sm:block">
-            <PhoneCall :size="22" class="text-white" />
+          <div class="hidden rounded-2xl bg-white/20 p-3 sm:block md:p-3.5">
+            <PhoneCall :size="28" class="text-white md:h-8 md:w-8" />
           </div>
         </div>
       </header>
@@ -225,9 +253,9 @@ onBeforeUnmount(() => {
               class="flex max-w-[80%] flex-col md:max-w-[70%]"
               :class="msg.sender === 'agent' ? 'items-end' : 'items-start'"
             >
-              <div
-                v-if="msg.type === 'text'"
-                class="rounded-2xl p-4 text-sm leading-relaxed shadow-sm md:p-5 md:text-base"
+            <div
+              v-if="msg.type === 'text'"
+              class="rounded-2xl p-4 text-sm leading-relaxed shadow-sm md:p-5 md:text-base"
                 :class="
                   msg.sender === 'agent'
                     ? 'rounded-tr-none bg-[#549474] text-white shadow-[#549474]/10'
@@ -239,8 +267,31 @@ onBeforeUnmount(() => {
                 </p>
               </div>
 
-              <div v-else class="group relative">
+              <div v-else-if="msg.type === 'sticker'" class="group relative">
                 <img :src="msg.url" alt="貼圖" class="h-auto w-32 rounded-lg md:w-48" />
+              </div>
+
+              <div
+                v-else-if="msg.type === 'image'"
+                class="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm"
+              >
+                <img :src="msg.url" :alt="msg.fileName" class="h-auto max-w-[220px] rounded-xl md:max-w-[320px]" />
+                <p class="mt-2 truncate text-xs font-medium text-slate-500">
+                  {{ msg.fileName }}
+                </p>
+              </div>
+
+              <div
+                v-else
+                class="flex min-w-[220px] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm"
+              >
+                <div class="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-500">
+                  檔案
+                </div>
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-semibold text-slate-700">{{ msg.fileName }}</p>
+                  <p class="truncate text-xs text-slate-400">{{ msg.fileType || '未知格式' }}</p>
+                </div>
               </div>
 
               <div
@@ -321,7 +372,13 @@ onBeforeUnmount(() => {
 
             <label class="cursor-pointer p-3 text-slate-400 transition-colors hover:text-[#549474]">
               <Paperclip :size="22" />
-              <input type="file" class="hidden" />
+              <input
+                ref="fileInputRef"
+                type="file"
+                class="hidden"
+                accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                @change="handleSendFile"
+              />
             </label>
 
             <textarea

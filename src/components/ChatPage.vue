@@ -9,6 +9,9 @@ import {
   AlertCircle,
   PhoneCall,
   LogOut,
+  ThumbsUp,
+  ThumbsDown,
+  PartyPopper,
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -25,6 +28,10 @@ const chatEndRef = ref(null);
 const stickerMenuRef = ref(null);
 const fileInputRef = ref(null);
 const previewImage = ref(null);
+const showFeedbackOverlay = ref(false);
+const feedbackSubmitted = ref(false);
+const feedbackGlow = ref(null);
+let feedbackCloseTimer = null;
 const resolveAssetUrl = (path) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
 
 const stickers = [
@@ -164,9 +171,61 @@ const closeImagePreview = () => {
   previewImage.value = null;
 };
 
+const clearFeedbackTimer = () => {
+  if (feedbackCloseTimer) {
+    clearTimeout(feedbackCloseTimer);
+    feedbackCloseTimer = null;
+  }
+};
+
+const resetFeedbackState = () => {
+  feedbackSubmitted.value = false;
+  feedbackGlow.value = null;
+};
+
+const openFeedback = () => {
+  clearFeedbackTimer();
+  resetFeedbackState();
+  showFeedbackOverlay.value = true;
+};
+
+const updateGlow = (type) => {
+  feedbackGlow.value = type;
+};
+
+const clearGlow = () => {
+  feedbackGlow.value = null;
+};
+
+const submitFinal = (type) => {
+  console.log('評價:', type);
+  feedbackSubmitted.value = true;
+  feedbackGlow.value = type;
+  clearFeedbackTimer();
+  feedbackCloseTimer = setTimeout(() => {
+    exitFull();
+  }, 3000);
+};
+
+const exitFull = () => {
+  clearFeedbackTimer();
+  showFeedbackOverlay.value = false;
+
+  setTimeout(() => {
+    resetFeedbackState();
+  }, 600);
+};
+
 const handleKeydown = (event) => {
   if (event.key === 'Escape') {
-    closeImagePreview();
+    if (previewImage.value) {
+      closeImagePreview();
+      return;
+    }
+
+    if (showFeedbackOverlay.value) {
+      exitFull();
+    }
   }
 };
 
@@ -177,6 +236,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  clearFeedbackTimer();
   document.removeEventListener('mousedown', handleClickOutside);
   document.removeEventListener('keydown', handleKeydown);
   chatData.messages.forEach((message) => {
@@ -189,10 +249,13 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="flex h-screen w-full overflow-hidden bg-white font-sans text-slate-800">
-    <main class="relative flex h-full w-full flex-col overflow-hidden bg-white">
+    <main
+      class="relative flex h-full w-full flex-col overflow-hidden bg-white transition-transform duration-700"
+      :class="showFeedbackOverlay ? 'scale-[0.985]' : 'scale-100'"
+    >
       <header
-        class="z-30 flex h-20 shrink-0 items-center bg-[#549474] px-6 text-white shadow-md md:px-10"
-        :class="headerClass"
+        class="z-30 flex h-20 shrink-0 items-center bg-[#549474] px-6 text-white shadow-md transition-all duration-700 md:px-10"
+        :class="[headerClass, showFeedbackOverlay ? 'brightness-50 blur-[2px]' : '']"
       >
         <div v-if="isAgentMode" class="flex items-center gap-4 overflow-hidden">
           <div
@@ -228,7 +291,10 @@ onBeforeUnmount(() => {
         </div>
       </header>
 
-      <div class="relative flex flex-1 flex-col overflow-hidden bg-white">
+      <div
+        class="relative flex flex-1 flex-col overflow-hidden bg-white transition-all duration-700"
+        :class="showFeedbackOverlay ? 'brightness-50 blur-md' : ''"
+      >
         <div
           class="pointer-events-none absolute inset-0 z-0 flex select-none items-center justify-center opacity-[0.07]"
         >
@@ -332,7 +398,10 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <footer class="relative z-30 shrink-0 border-t border-slate-100 bg-white px-6 py-6 md:px-10">
+      <footer
+        class="relative z-30 shrink-0 border-t border-slate-100 bg-white px-6 py-6 transition-all duration-700 md:px-10"
+        :class="showFeedbackOverlay ? 'brightness-50 blur-[2px]' : ''"
+      >
         <div v-if="isAgentMode" class="no-scrollbar flex gap-2 overflow-x-auto pb-5">
           <button
             v-for="reply in quickReplies"
@@ -429,6 +498,7 @@ onBeforeUnmount(() => {
           <button
             type="button"
             class="hidden h-[64px] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-[#757472] p-4 font-bold text-white shadow-md transition-all active:scale-95 hover:bg-slate-600 sm:flex"
+            @click="openFeedback"
           >
             <LogOut :size="20" />
             結束對話
@@ -436,6 +506,7 @@ onBeforeUnmount(() => {
           <button
             type="button"
             class="h-[64px] rounded-2xl bg-[#757472] p-4 text-white shadow-md sm:hidden"
+            @click="openFeedback"
           >
             <LogOut :size="20" />
           </button>
@@ -484,11 +555,239 @@ onBeforeUnmount(() => {
           </p>
         </div>
       </div>
+
+      <div
+        class="feedback-overlay"
+        :class="showFeedbackOverlay ? 'active' : ''"
+      >
+        <div
+          class="glow-sphere"
+          :class="[
+            feedbackGlow === 'positive' ? 'positive' : '',
+            feedbackGlow === 'negative' ? 'negative' : '',
+            feedbackGlow ? 'visible' : '',
+          ]"
+        />
+
+        <div class="feedback-box" :class="showFeedbackOverlay ? 'active' : ''">
+          <template v-if="!feedbackSubmitted">
+            <h1>本次對話滿意嗎？</h1>
+            <p>您的回饋能讓我們做得更好</p>
+
+            <div class="reaction-container">
+              <button
+                type="button"
+                class="reaction-card up"
+                @mouseenter="updateGlow('positive')"
+                @mouseleave="clearGlow"
+                @click="submitFinal('positive')"
+              >
+                <ThumbsUp class="reaction-icon" />
+                <span>非常滿意</span>
+              </button>
+
+              <button
+                type="button"
+                class="reaction-card down"
+                @mouseenter="updateGlow('negative')"
+                @mouseleave="clearGlow"
+                @click="submitFinal('negative')"
+              >
+                <ThumbsDown class="reaction-icon" />
+                <span>有待改進</span>
+              </button>
+            </div>
+
+            <button type="button" class="close-btn" @click="exitFull">
+              暫不評價，直接離開
+            </button>
+          </template>
+
+          <div v-else class="success-state">
+            <PartyPopper class="success-icon" />
+            <h1>感謝您的回饋！</h1>
+            <p>對話已結束，祝您有愉快的一天。</p>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 </template>
 
 <style scoped>
+.feedback-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.6s ease,
+    backdrop-filter 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  backdrop-filter: blur(0px);
+}
+
+.feedback-overlay.active {
+  opacity: 1;
+  visibility: visible;
+  backdrop-filter: blur(36px);
+}
+
+.glow-sphere {
+  position: absolute;
+  width: min(62vw, 600px);
+  height: min(62vw, 600px);
+  border-radius: 9999px;
+  filter: blur(120px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.7s ease, background 0.7s ease;
+}
+
+.glow-sphere.visible {
+  opacity: 0.6;
+}
+
+.glow-sphere.positive {
+  background: radial-gradient(circle, rgba(52, 199, 89, 0.4) 0%, transparent 70%);
+}
+
+.glow-sphere.negative {
+  background: radial-gradient(circle, rgba(255, 59, 48, 0.4) 0%, transparent 70%);
+}
+
+.feedback-box {
+  width: min(100%, 760px);
+  text-align: center;
+  color: white;
+  transform: translateY(40px);
+  opacity: 0;
+  transition: transform 0.8s ease, opacity 0.8s ease;
+}
+
+.feedback-box.active {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.feedback-box h1 {
+  margin: 0 0 12px;
+  font-size: clamp(2rem, 5vw, 2.625rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.feedback-box p {
+  margin: 0;
+  font-size: clamp(1rem, 2vw, 1.125rem);
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.reaction-container {
+  display: flex;
+  justify-content: center;
+  gap: clamp(16px, 4vw, 60px);
+  margin-top: 56px;
+}
+
+.reaction-card {
+  width: min(40vw, 200px);
+  height: min(40vw, 200px);
+  min-width: 150px;
+  min-height: 150px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 40px;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.reaction-icon {
+  width: 72px;
+  height: 72px;
+  color: rgba(255, 255, 255, 0.3);
+  transition: color 0.4s ease;
+}
+
+.reaction-card span {
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.3);
+  transition: color 0.4s ease;
+}
+
+.reaction-card.up:hover {
+  transform: scale(1.12) translateY(-12px);
+  border-color: #34c759;
+  background: rgba(52, 199, 89, 0.15);
+  box-shadow: 0 20px 50px rgba(52, 199, 89, 0.28);
+}
+
+.reaction-card.up:hover .reaction-icon,
+.reaction-card.up:hover span {
+  color: #34c759;
+}
+
+.reaction-card.down:hover {
+  transform: scale(1.12) translateY(-12px);
+  border-color: #ff3b30;
+  background: rgba(255, 59, 48, 0.15);
+  box-shadow: 0 20px 50px rgba(255, 59, 48, 0.28);
+}
+
+.reaction-card.down:hover .reaction-icon,
+.reaction-card.down:hover span {
+  color: #ff3b30;
+}
+
+.close-btn {
+  margin-top: 48px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.48);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.close-btn:hover {
+  color: white;
+}
+
+.success-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: fade-in 0.5s forwards;
+}
+
+.success-icon {
+  width: 100px;
+  height: 100px;
+  margin-bottom: 24px;
+  color: #34c759;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -513,5 +812,37 @@ onBeforeUnmount(() => {
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #cbd5e1;
+}
+
+@media (max-width: 640px) {
+  .feedback-overlay {
+    padding: 20px;
+  }
+
+  .reaction-container {
+    flex-direction: column;
+    align-items: center;
+    margin-top: 40px;
+  }
+
+  .reaction-card {
+    width: min(100%, 280px);
+    height: 160px;
+    border-radius: 32px;
+  }
+
+  .reaction-icon {
+    width: 56px;
+    height: 56px;
+  }
+
+  .close-btn {
+    margin-top: 36px;
+  }
+
+  .success-icon {
+    width: 80px;
+    height: 80px;
+  }
 }
 </style>

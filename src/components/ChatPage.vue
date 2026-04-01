@@ -78,11 +78,11 @@ const chatData = reactive({
 });
 
 const quickReplies = [
-  '了解，謝謝專員',
-  '我要查詢申請資格',
-  '我要查詢辦理進度',
-  '轉接專人服務',
-  '感謝您的諮詢',
+  '您好，已收到您的反映，我先幫您確認。',
+  '此案件已轉請相關單位處理，請您稍候。',
+  '請提供更詳細的地址、照片或時間資訊，以利後續查查證。',
+  '若涉及緊急危安情況，建議您立即撥打 119 或 110。',
+  '感謝您的通報，後續若有進度會再主動回覆您。',
 ];
 
 const headerClass = computed(() =>
@@ -248,7 +248,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex h-screen w-full overflow-hidden bg-white font-sans text-slate-800">
+  <div class="chat-shell flex min-h-screen w-full overflow-hidden bg-white font-sans text-slate-800">
     <main
       class="relative flex h-full w-full flex-col overflow-hidden bg-white transition-transform duration-700"
       :class="showFeedbackOverlay ? 'scale-[0.985]' : 'scale-100'"
@@ -399,7 +399,7 @@ onBeforeUnmount(() => {
       </div>
 
       <footer
-        class="relative z-30 shrink-0 border-t border-slate-100 bg-white px-6 py-6 transition-all duration-700 md:px-10"
+        class="chat-footer relative z-30 shrink-0 border-t border-slate-100 bg-white px-6 py-6 transition-all duration-700 md:px-10"
         :class="showFeedbackOverlay ? 'brightness-50 blur-[2px]' : ''"
       >
         <div v-if="isAgentMode" class="no-scrollbar flex gap-2 overflow-x-auto pb-5">
@@ -448,9 +448,9 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div class="relative flex w-full items-end gap-3">
+        <div class="relative flex w-full items-center gap-2 sm:gap-3">
           <div
-            class="flex flex-1 items-end gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-sm transition-all duration-200 focus-within:border-[#549474]/40 focus-within:bg-white"
+            class="flex min-w-0 flex-1 items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-sm transition-all duration-200 focus-within:border-[#549474]/40 focus-within:bg-white"
           >
             <button
               type="button"
@@ -476,13 +476,13 @@ onBeforeUnmount(() => {
               v-model="inputText"
               rows="1"
               placeholder="請輸入訊息內容..."
-              class="max-h-40 flex-1 resize-none border-none bg-transparent py-3 text-base leading-relaxed text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-0"
+              class="min-w-0 max-h-40 flex-1 overflow-hidden resize-none border-none bg-transparent py-3 text-sm leading-normal text-slate-700 placeholder:whitespace-nowrap placeholder:text-slate-400 focus:outline-none focus:ring-0 sm:text-base"
               @keydown.enter.exact.prevent="handleSendMessage"
             />
 
             <button
               type="button"
-              class="rounded-xl p-4 transition-all"
+              class="shrink-0 rounded-xl p-4 transition-all"
               :class="
                 inputText.trim()
                   ? 'bg-[#549474] text-white shadow-lg shadow-[#549474]/20 active:scale-95'
@@ -505,7 +505,7 @@ onBeforeUnmount(() => {
           </button>
           <button
             type="button"
-            class="h-[64px] rounded-2xl bg-[#757472] p-4 text-white shadow-md sm:hidden"
+            class="shrink-0 self-stretch rounded-2xl bg-[#757472] px-3 text-white shadow-md sm:hidden"
             @click="openFeedback"
           >
             <LogOut :size="20" />
@@ -615,6 +615,14 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.chat-shell {
+  min-height: 100dvh;
+}
+
+.chat-footer {
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+}
+
 .feedback-overlay {
   position: absolute;
   inset: 0;
